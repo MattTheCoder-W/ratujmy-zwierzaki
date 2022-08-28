@@ -2,6 +2,9 @@ from time import sleep
 from argparse import ArgumentParser
 import concurrent.futures
 import geckodriver_autoinstaller
+import colorama
+from colorama import Fore, Back, Style
+from termcolor import colored
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -10,6 +13,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.firefox.options import Options
 
+from datetime import datetime
+
+colorama.init()
+
+SAVED = 0
+START = datetime.now()
 
 class Ratownik:
     def __init__(self, obj_id: int) -> None:
@@ -47,7 +56,9 @@ class Ratownik:
         return self.driver.find_elements(By.XPATH, self.cookies_accept_xpath)
 
     def save_animal(self) -> None:
-        prefix = f"[browser-{self.ID}, lap={self.laps}]"
+        global SAVED
+        global START
+        prefix = Fore.MAGENTA + Style.BRIGHT + f"[browser-{Fore.RED}{self.ID}{Fore.MAGENTA}, lap={Fore.RED}{self.laps}{Fore.MAGENTA}]" + Style.RESET_ALL
         print(f"{prefix} Saving animal in progress")
         self.driver.get(self.page_url)
         sleep(1)
@@ -58,14 +69,15 @@ class Ratownik:
         self.driver.find_elements(By.XPATH, self.like_xpath)[0].click()
         self.laps += 1
 
-        print(f"{prefix} Animal saved!")
+        print(f"{prefix} -- time {str(datetime.now() - START).split('.')[0]} -- " + Fore.GREEN + "Animal saved!" + Style.RESET_ALL)
+        SAVED += 1
         self.clear_cookies()
-        print(f"{prefix} INFO: Cookies cleared, waiting {self.TIMEOUT} seconds before restart")
+        print(f"{prefix} " + Fore.ORANGE + "INFO:" + Style.RESET_ALL + " Cookies cleared, waiting {self.TIMEOUT} seconds before restart")
         sleep(self.TIMEOUT)
 
     def close(self) -> None:
         self.driver.quit()
-        print(f"[browser-{self.ID}] Browser closed")
+        print(Fore.MAGENTA + Style.BRIGHT + f"[browser-{self.ID}] " + Style.RESET_ALL + "Browser closed")
         
 
 if __name__ == "__main__":
@@ -76,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", "-q", action="store_true", help="Program nie będzie nic wypisywał w konsoli")
     args = vars(parser.parse_args())
 
-    print("Checking for geckodriver...")
+    print(Fore.YELLOW + "Checking for geckodriver..." + Style.RESET_ALL)
     geckodriver_autoinstaller.install()
 
     LAPS: int = int(args['laps'])
@@ -85,17 +97,27 @@ if __name__ == "__main__":
     THREADS: int = int(args['threads']) if args['threads'] is not None else 1
 
     if THREADS <= 0:
-        print("Proszę o dodatnią wartość")
+        print(Fore.RED + Style.BRIGHT + "[ERROR] [threads] Proszę o dodatnią wartość" + Style.RESET_ALL)
         exit(1)
 
     ratownicy = []
     for i in range(THREADS):
         ratownicy.append(Ratownik(i))
 
+    START = datetime.now()
+    last_printed = -1
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:
+        futures = []
         for lap_id in range(LAPS):
             for ratownik in ratownicy:
-                executor.submit(ratownik.save_animal)
+                futures.append(executor.submit(ratownik.save_animal))
+                sleep(1)
+        for future in concurrent.futures.as_completed(futures):
+            if SAVED - last_printed > 5 and SAVED != 0:
+                print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
+                last_printed = SAVED
+
 
     for ratownik in ratownicy:
         ratownik.close()
