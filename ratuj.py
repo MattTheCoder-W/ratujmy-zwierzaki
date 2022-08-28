@@ -21,7 +21,7 @@ SAVED = 0
 START = datetime.now()
 
 class Ratownik:
-    def __init__(self, obj_id: int) -> None:
+    def __init__(self, obj_id: int, timeout: int = 1) -> None:
         self.ID = obj_id
         self.laps = 0
         options = Options()
@@ -31,7 +31,7 @@ class Ratownik:
         self.page_url = "https://whatwevalue.telekom.com/pl-PL/projects/2B7EbLBBdvXrBQsGbhIasl"
         self.cookies_accept_xpath = "/html/body/div/div/div[1]/main/div[1]/div[2]/div/div[2]/div[2]/button[1]"
         self.like_xpath = "/html/body/div/div/div[1]/main/div/div[9]/div[2]/div[2]/button"
-        self.TIMEOUT = 1
+        self.TIMEOUT = timeout
 
     def get_dialog(self, driv) -> list:
         return self.driver.find_elements(By.CSS_SELECTOR, 'vbox.dialogOverlay:nth-child(1) > vbox:nth-child(1) > browser:nth-child(2)')
@@ -83,7 +83,8 @@ class Ratownik:
 if __name__ == "__main__":
     parser = ArgumentParser(description="Ratuj zwierzaki mordo")
     parser.add_argument("laps", type=int, help="Liczba powtórzeń kliknięcia (na każdej z przeglądarek)")
-    parser.add_argument("--threads", "-t", type=int, help="Liczba wątków (przeglądarek) na raz (uwaga na zużycie RAMu!)")
+    parser.add_argument("--timeout", type=int, help="Czas do odczekania po każdym like (domyślnie 1 sek)")
+    parser.add_argument("--threads", type=int, help="Liczba wątków (przeglądarek) na raz (uwaga na zużycie RAMu!)")
     parser.add_argument("--not-headless", action="store_true", help="Nie chowa przeglądrek z widoku")
     parser.add_argument("--quiet", "-q", action="store_true", help="Program nie będzie nic wypisywał w konsoli")
     args = vars(parser.parse_args())
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     QUIET: bool = args['quiet']
     HEADLESS: bool = not args['not_headless']
     THREADS: int = int(args['threads']) if args['threads'] is not None else 1
+    TIMEOUT: int  = int(args['timeout']) if args['timeout'] is not None else 1
 
     if THREADS <= 0:
         print(Fore.RED + Style.BRIGHT + "[ERROR] [threads] Proszę o dodatnią wartość" + Style.RESET_ALL)
@@ -102,7 +104,7 @@ if __name__ == "__main__":
 
     ratownicy = []
     for i in range(THREADS):
-        ratownicy.append(Ratownik(i))
+        ratownicy.append(Ratownik(i, TIMEOUT))
 
     START = datetime.now()
     last_printed = -1
@@ -112,7 +114,8 @@ if __name__ == "__main__":
         for lap_id in range(LAPS):
             for ratownik in ratownicy:
                 futures.append(executor.submit(ratownik.save_animal))
-                sleep(1)
+                if lap_id == 0:
+                    sleep(1)
         for future in concurrent.futures.as_completed(futures):
             if SAVED - last_printed > 5 and SAVED != 0:
                 print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
@@ -121,4 +124,10 @@ if __name__ == "__main__":
 
     for ratownik in ratownicy:
         ratownik.close()
+
+    print(Style.BRIGHT + f"========== Summary ==========" + Style.RESET_ALL)
+    print(Style.BRIGHT + f"{'Browsers:':20} " + Style.RESET_ALL + f"{THREADS}")
+    print(Style.BRIGHT + f"{'Timeout:':20} " + Style.RESET_ALL + f"{TIMEOUT} seconds")
+    print(Style.BRIGHT + f"{'Saved animals:':20} " + Style.RESET_ALL + f"{SAVED}")
+    print(Style.BRIGHT + f"{'Time:':20} " + Style.RESET_ALL + f"{str(datetime.now() - START).split('.')[0]}")
 
