@@ -1,2 +1,4 @@
 selenium
 geckodriver-autoinstaller
+colorama
+termcolor
