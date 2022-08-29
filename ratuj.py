@@ -24,7 +24,7 @@ SAVED = 0
 START = datetime.now()
 
 class Ratownik:
-    def __init__(self, obj_id: int, timeout: int = 1, max_timeout: int = 15) -> None:
+    def __init__(self, obj_id: int, timeout: int = 1, max_timeout: int = 15, intimeout: float = 1.5) -> None:
         self.running = False
         self.ID = obj_id
         self.laps = 0
@@ -33,6 +33,7 @@ class Ratownik:
         self.like_xpath = "/html/body/div/div/div[1]/main/div/div[9]/div[2]/div[2]/button"
         self.TIMEOUT = timeout
         self.MAX_TIMEOUT = max_timeout
+        self.intimeout = intimeout
         self.driver = self.wait = None
         self.create_browser()
 
@@ -69,8 +70,7 @@ class Ratownik:
 
     def save_animal(self) -> None:
         while self.running:
-            sleep(1)
-            print("Waiting for finish")
+            sleep(0.1)
         while True:
             try:
                 self.running = True
@@ -79,7 +79,7 @@ class Ratownik:
                 prefix = Fore.MAGENTA + Style.BRIGHT + f"[browser-{Fore.RED}{self.ID}{Fore.MAGENTA}, lap={Fore.RED}{self.laps}{Fore.MAGENTA}]" + Style.RESET_ALL
                 while True:
                     self.driver.get(self.page_url)
-                    sleep(1.5)
+                    sleep(self.intimeout)
                     try:
                         self.wait.until(self.get_accept_cookies)
                         break
@@ -87,7 +87,7 @@ class Ratownik:
                         pass
                 self.get_accept_cookies(None)[0].click()
                 self.driver.execute_script('document.querySelector(".boost-us-button").scrollIntoView();')
-                sleep(1.5)
+                sleep(self.intimeout)
                 self.driver.find_elements(By.XPATH, self.like_xpath)[0].click()
                 self.laps += 1
 
@@ -101,6 +101,7 @@ class Ratownik:
                 with open("log.log", "a") as f:
                     print(Fore.RED + Style.BRIGHT + "Got Error! Skipping..." + Style.RESET_ALL)
                     f.write(str(type(e)) + str(e) + "\n")
+                self.driver.quit()
                 self.create_browser()
                 continue
             break
@@ -116,6 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--timeout", type=int, help="Czas do odczekania po każdym like (domyślnie 1 sek)")
     parser.add_argument("--threads", type=int, help="Liczba wątków (przeglądarek) na raz (uwaga na zużycie RAMu!)")
     parser.add_argument("--max-timeout", type=int, help="Czas po jakim przeglądarka uznawana jest za martwą")
+    parser.add_argument("--in-timeout", type=float, help="Czas do czekania wewnątrz klikania (1.5 def)")
     parser.add_argument("--not-headless", action="store_true", help="Nie chowa przeglądrek z widoku")
     parser.add_argument("--quiet", "-q", action="store_true", help="Program nie będzie nic wypisywał w konsoli")
     args = vars(parser.parse_args())
@@ -126,6 +128,7 @@ if __name__ == "__main__":
     THREADS: int = int(args['threads']) if args['threads'] is not None else 1
     TIMEOUT: int  = int(args['timeout']) if args['timeout'] is not None else 1
     MAX_TIMEOUT: int = int(args['max_timeout']) if args['max_timeout'] is not None else 15
+    IN_TIMEOUT: float = float(args['in_timeout']) if args['in_timeout'] is not None else 1.5
 
     if THREADS <= 0:
         print(Fore.RED + Style.BRIGHT + "[ERROR] [threads] Proszę o dodatnią wartość" + Style.RESET_ALL)
@@ -134,17 +137,20 @@ if __name__ == "__main__":
     ratownicy = []
     for i in range(THREADS):
         print(f"[{i+1}/{THREADS}] Started")
-        ratownicy.append(Ratownik(i, TIMEOUT, MAX_TIMEOUT))
+        ratownicy.append(Ratownik(i, TIMEOUT, MAX_TIMEOUT, IN_TIMEOUT))
 
     START = datetime.now()
     last_printed = 0
 
-    for lap_id in range(LAPS):
-        with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:
+        for lap_id in range(LAPS):
             for ratownik in ratownicy:
                 executor.submit(ratownik.save_animal)
-                sleep(0.1)
-        print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
+                sleep(1)
+
+            print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
+
+    STOP = datetime.now()
 
     for ratownik in ratownicy:
         ratownik.close()
@@ -153,6 +159,6 @@ if __name__ == "__main__":
     print(Style.BRIGHT + f"{'Browsers:':20} " + Style.RESET_ALL + f"{THREADS}")
     print(Style.BRIGHT + f"{'Timeout:':20} " + Style.RESET_ALL + f"{TIMEOUT} seconds")
     print(Style.BRIGHT + f"{'Saved animals:':20} " + Style.RESET_ALL + f"{SAVED}")
-    print(Style.BRIGHT + f"{'Time:':20} " + Style.RESET_ALL + f"{str(datetime.now() - START).split('.')[0]}")
+    print(Style.BRIGHT + f"{'Time:':20} " + Style.RESET_ALL + f"{str(STOP - START).split('.')[0]}")
     print(Style.BRIGHT + f"{'CPM:':20} " + Style.RESET_ALL + f"{round(SAVED/(datetime.now() - START).total_seconds(),10)*60}")
 
