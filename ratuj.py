@@ -148,7 +148,9 @@ if __name__ == "__main__":
                 executor.submit(ratownik.save_animal)
                 sleep(1)
 
-            print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
+            print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f" Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
+            TO_GO = (LAPS-lap_id) * THREADS
+            print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f" CPM: {round(SAVED/(datetime.now() - START).total_seconds(),10)*60}, To go: {TO_GO/(round(SAVED/(datetime.now() - START).total_seconds(),10)*60)} min." + Style.RESET_ALL)
 
     STOP = datetime.now()
 
