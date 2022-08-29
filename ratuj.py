@@ -139,18 +139,12 @@ if __name__ == "__main__":
     START = datetime.now()
     last_printed = 0
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:
-        futures = []
-        for lap_id in range(LAPS):
+    for lap_id in range(LAPS):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:
             for ratownik in ratownicy:
-                futures.append(executor.submit(ratownik.save_animal))
-                if lap_id == 0:
-                    sleep(1)
-        for future in concurrent.futures.as_completed(futures):
-            if SAVED - last_printed > 5 and SAVED != 0:
-                print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
-                last_printed = SAVED
-
+                executor.submit(ratownik.save_animal)
+                sleep(0.1)
+        print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f"Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
 
     for ratownik in ratownicy:
         ratownik.close()
