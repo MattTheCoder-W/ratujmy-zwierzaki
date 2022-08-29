@@ -2,3 +2,4 @@ selenium
 geckodriver-autoinstaller
 colorama
 termcolor
+fake-useragent

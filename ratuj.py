@@ -1,10 +1,12 @@
 from time import sleep
 from argparse import ArgumentParser
 import concurrent.futures
-import geckodriver_autoinstaller
 import colorama
 from colorama import Fore, Back, Style
 from termcolor import colored
+
+from random import randint
+from fake_useragent import UserAgent
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -24,10 +26,16 @@ class Ratownik:
     def __init__(self, obj_id: int, timeout: int = 1) -> None:
         self.ID = obj_id
         self.laps = 0
+
         options = Options()
         options.headless = True
+        ua = UserAgent()
+        user_agent = ua.random
+        options.add_argument(f'user-agent={user_agent}')
+
         self.driver = webdriver.Firefox(options=options)
-        self.wait = WebDriverWait(self.driver, 5)
+        self.wait = WebDriverWait(self.driver, 10)
+        
         self.page_url = "https://whatwevalue.telekom.com/pl-PL/projects/2B7EbLBBdvXrBQsGbhIasl"
         self.cookies_accept_xpath = "/html/body/div/div/div[1]/main/div[1]/div[2]/div/div[2]/div[2]/button[1]"
         self.like_xpath = "/html/body/div/div/div[1]/main/div/div[9]/div[2]/div[2]/button"
@@ -56,24 +64,29 @@ class Ratownik:
         return self.driver.find_elements(By.XPATH, self.cookies_accept_xpath)
 
     def save_animal(self) -> None:
-        global SAVED
-        global START
-        prefix = Fore.MAGENTA + Style.BRIGHT + f"[browser-{Fore.RED}{self.ID}{Fore.MAGENTA}, lap={Fore.RED}{self.laps}{Fore.MAGENTA}]" + Style.RESET_ALL
-        print(f"{prefix} Saving animal in progress")
-        self.driver.get(self.page_url)
-        sleep(1)
-        self.wait.until(self.get_accept_cookies)
-        self.get_accept_cookies(None)[0].click()
-        self.driver.execute_script('document.querySelector(".boost-us-button").scrollIntoView();')
-        sleep(0.5)
-        self.driver.find_elements(By.XPATH, self.like_xpath)[0].click()
-        self.laps += 1
+        try:
+            global SAVED
+            global START
+            prefix = Fore.MAGENTA + Style.BRIGHT + f"[browser-{Fore.RED}{self.ID}{Fore.MAGENTA}, lap={Fore.RED}{self.laps}{Fore.MAGENTA}]" + Style.RESET_ALL
+            # print(f"{prefix} Saving animal in progress")
+            self.driver.get(self.page_url)
+            sleep(1.5)
+            self.wait.until(self.get_accept_cookies)
+            self.get_accept_cookies(None)[0].click()
+            self.driver.execute_script('document.querySelector(".boost-us-button").scrollIntoView();')
+            sleep(1.5)
+            self.driver.find_elements(By.XPATH, self.like_xpath)[0].click()
+            self.laps += 1
 
-        print(f"{prefix} -- time {str(datetime.now() - START).split('.')[0]} -- " + Fore.GREEN + "Animal saved!" + Style.RESET_ALL)
-        SAVED += 1
-        self.clear_cookies()
-        print(f"{prefix} " + Fore.ORANGE + "INFO:" + Style.RESET_ALL + " Cookies cleared, waiting {self.TIMEOUT} seconds before restart")
-        sleep(self.TIMEOUT)
+            print(f"{prefix} -- time {str(datetime.now() - START).split('.')[0]} -- [CPM:{round(SAVED/(datetime.now() - START).total_seconds(),10)*60}] [{SAVED}] " + Fore.GREEN + "Animal saved!" + Style.RESET_ALL)
+            SAVED += 1
+            self.clear_cookies()
+            print(f"{prefix} " + Fore.YELLOW + "INFO:" + Style.RESET_ALL + f" Cookies cleared, waiting {self.TIMEOUT} seconds before restart")
+            sleep(randint(self.TIMEOUT, self.TIMEOUT+3))
+        except Exception as e:
+            with open("log.log", "a") as f:
+                print("Got Error type:", type(e))
+                f.write(str(type(e)) + str(e) + "\n")
 
     def close(self) -> None:
         self.driver.quit()
@@ -89,9 +102,6 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", "-q", action="store_true", help="Program nie będzie nic wypisywał w konsoli")
     args = vars(parser.parse_args())
 
-    print(Fore.YELLOW + "Checking for geckodriver..." + Style.RESET_ALL)
-    geckodriver_autoinstaller.install()
-
     LAPS: int = int(args['laps'])
     QUIET: bool = args['quiet']
     HEADLESS: bool = not args['not_headless']
@@ -104,6 +114,7 @@ if __name__ == "__main__":
 
     ratownicy = []
     for i in range(THREADS):
+        print(f"[{i+1}/{THREADS}] Started")
         ratownicy.append(Ratownik(i, TIMEOUT))
 
     START = datetime.now()
@@ -130,4 +141,5 @@ if __name__ == "__main__":
     print(Style.BRIGHT + f"{'Timeout:':20} " + Style.RESET_ALL + f"{TIMEOUT} seconds")
     print(Style.BRIGHT + f"{'Saved animals:':20} " + Style.RESET_ALL + f"{SAVED}")
     print(Style.BRIGHT + f"{'Time:':20} " + Style.RESET_ALL + f"{str(datetime.now() - START).split('.')[0]}")
+    print(Style.BRIGHT + f"{'CPM:':20} " + Style.RESET_ALL + f"{round(SAVED/(datetime.now() - START).total_seconds(),10)*60}")
 
