@@ -23,18 +23,16 @@ SAVED = 0
 START = datetime.now()
 
 class Ratownik:
-    def __init__(self, obj_id: int, timeout: int = 1) -> None:
+    def __init__(self, obj_id: int, timeout: int = 1, max_timeout: int = 60) -> None:
         self.ID = obj_id
         self.laps = 0
 
         options = Options()
         options.headless = True
-        ua = UserAgent()
-        user_agent = ua.random
-        options.add_argument(f'user-agent={user_agent}')
+        options.add_argument(f'user-agent={UserAgent().random}')
 
         self.driver = webdriver.Firefox(options=options)
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, max_timeout)
         
         self.page_url = "https://whatwevalue.telekom.com/pl-PL/projects/2B7EbLBBdvXrBQsGbhIasl"
         self.cookies_accept_xpath = "/html/body/div/div/div[1]/main/div[1]/div[2]/div/div[2]/div[2]/button[1]"
@@ -68,7 +66,6 @@ class Ratownik:
             global SAVED
             global START
             prefix = Fore.MAGENTA + Style.BRIGHT + f"[browser-{Fore.RED}{self.ID}{Fore.MAGENTA}, lap={Fore.RED}{self.laps}{Fore.MAGENTA}]" + Style.RESET_ALL
-            # print(f"{prefix} Saving animal in progress")
             self.driver.get(self.page_url)
             sleep(1.5)
             self.wait.until(self.get_accept_cookies)
@@ -81,11 +78,12 @@ class Ratownik:
             print(f"{prefix} -- time {str(datetime.now() - START).split('.')[0]} -- [CPM:{round(SAVED/(datetime.now() - START).total_seconds(),10)*60}] [{SAVED}] " + Fore.GREEN + "Animal saved!" + Style.RESET_ALL)
             SAVED += 1
             self.clear_cookies()
-            print(f"{prefix} " + Fore.YELLOW + "INFO:" + Style.RESET_ALL + f" Cookies cleared, waiting {self.TIMEOUT} seconds before restart")
-            sleep(randint(self.TIMEOUT, self.TIMEOUT+3))
+            c_timeout = randint(self.TIMEOUT, self.TIMEOUT+3)
+            print(f"{prefix} " + Fore.YELLOW + "INFO:" + Style.RESET_ALL + f" Cookies cleared, waiting {c_timeout} seconds before restart")
+            sleep(c_timeout)
         except Exception as e:
             with open("log.log", "a") as f:
-                print("Got Error type:", type(e))
+                print(Fore.RED + Style.BRIGHT + "Got Error! Skipping..." + Style.RESET_ALL)
                 f.write(str(type(e)) + str(e) + "\n")
 
     def close(self) -> None:
