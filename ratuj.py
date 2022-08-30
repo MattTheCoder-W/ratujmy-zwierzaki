@@ -30,7 +30,7 @@ class Ratownik:
         self.laps = 0
         self.page_url = "https://whatwevalue.telekom.com/pl-PL/projects/2B7EbLBBdvXrBQsGbhIasl"
         self.cookies_accept_xpath = "/html/body/div/div/div[1]/main/div[1]/div[2]/div/div[2]/div[2]/button[1]"
-        self.like_xpath = "/html/body/div/div/div[1]/main/div/div[9]/div[2]/div[2]/button"
+        self.like_selector = ".boost-us-button"
         self.TIMEOUT = timeout
         self.MAX_TIMEOUT = max_timeout
         self.intimeout = intimeout
@@ -88,7 +88,7 @@ class Ratownik:
                 self.get_accept_cookies(None)[0].click()
                 self.driver.execute_script('document.querySelector(".boost-us-button").scrollIntoView();')
                 sleep(self.intimeout)
-                self.driver.find_elements(By.XPATH, self.like_xpath)[0].click()
+                self.driver.find_elements(By.CSS_SELECTOR, self.like_selector)[0].click()
                 self.laps += 1
 
                 print(f"{prefix} -- time {str(datetime.now() - START).split('.')[0]} -- [CPM:{round(SAVED/(datetime.now() - START).total_seconds(),10)*60}] [{SAVED}] " + Fore.GREEN + "Animal saved!" + Style.RESET_ALL)
@@ -150,7 +150,10 @@ if __name__ == "__main__":
 
             print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f" Saved {SAVED} animals in {(datetime.now() - START)}!" + Style.RESET_ALL)
             TO_GO = (LAPS-lap_id) * THREADS
-            print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f" CPM: {round(SAVED/(datetime.now() - START).total_seconds(),10)*60}, To go: {TO_GO/(round(SAVED/(datetime.now() - START).total_seconds(),10)*60)} min." + Style.RESET_ALL)
+            CPM = round(SAVED/(datetime.now() - START).total_seconds(),10)*60
+            if CPM != 0:
+                print(Fore.YELLOW + Style.BRIGHT + "[INFO]" + Fore.GREEN +  f" CPM: {CPM}, To go: {TO_GO/CPM} min." + Style.RESET_ALL)
+
 
     STOP = datetime.now()
 
