@@ -111,6 +111,13 @@ class Ratownik:
         print(Fore.MAGENTA + Style.BRIGHT + f"[browser-{self.ID}] " + Style.RESET_ALL + "Browser closed")
         
 
+def url(value: str) -> str:
+    if "http://" not in value and "https://" not in value:
+        print(f"Specified url: {value} is not valid (add http/s://)")
+        exit(1)
+    return value
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="Ratuj zwierzaki mordo")
     parser.add_argument("laps", type=int, help="Liczba powtórzeń kliknięcia (na każdej z przeglądarek)")
@@ -118,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("--threads", type=int, help="Liczba wątków (przeglądarek) na raz (uwaga na zużycie RAMu!)")
     parser.add_argument("--max-timeout", type=int, help="Czas po jakim przeglądarka uznawana jest za martwą")
     parser.add_argument("--in-timeout", type=float, help="Czas do czekania wewnątrz klikania (1.5 def)")
+    parser.add_argument("--url", type=url, help="Link do strony projektu")
     parser.add_argument("--not-headless", action="store_true", help="Nie chowa przeglądrek z widoku")
     parser.add_argument("--quiet", "-q", action="store_true", help="Program nie będzie nic wypisywał w konsoli")
     args = vars(parser.parse_args())
